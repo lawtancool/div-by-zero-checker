@@ -14,6 +14,7 @@ import org.checkerframework.framework.flow.CFAnalysis;
 import org.checkerframework.framework.flow.CFStore;
 import org.checkerframework.framework.flow.CFTransfer;
 import org.checkerframework.framework.flow.CFValue;
+import org.checkerframework.framework.type.AnnotatedTypeFactory;
 import org.checkerframework.framework.type.QualifierHierarchy;
 import org.checkerframework.javacutil.AnnotationBuilder;
 import org.checkerframework.javacutil.AnnotationUtils;
@@ -77,6 +78,19 @@ public class DivByZeroTransfer extends CFTransfer {
   private AnnotationMirror refineLhsOfComparison(
       Comparison operator, AnnotationMirror lhs, AnnotationMirror rhs) {
     // TODO
+    AnnotatedTypeFactory factory = analysis.getTypeFactory();
+    switch (operator) {
+      case GE:
+      case LE:
+      case EQ:
+        return glb(lhs, rhs);
+      case GT:
+      case LT:
+      case NE:
+        if (factory.areSameByClass(rhs, Zero.class)) {
+          return glb(lhs, reflect(NonZero.class));
+        }
+    }
     return lhs;
   }
 
@@ -97,7 +111,36 @@ public class DivByZeroTransfer extends CFTransfer {
    */
   private AnnotationMirror arithmeticTransfer(
       BinaryOperator operator, AnnotationMirror lhs, AnnotationMirror rhs) {
-    // TODO
+    AnnotatedTypeFactory factory = analysis.getTypeFactory();
+
+    if (operator == BinaryOperator.PLUS || operator == BinaryOperator.MINUS) {
+      if (factory.areSameByClass(lhs, Zero.class) && factory.areSameByClass(rhs, Zero.class)) {
+        return reflect(Zero.class);
+      }
+      if ((factory.areSameByClass(lhs, NonZero.class) && factory.areSameByClass(rhs, Zero.class))
+          || (factory.areSameByClass(lhs, Zero.class) && factory.areSameByClass(rhs, NonZero.class))) {
+        return reflect(NonZero.class);
+      }
+    }
+    if (operator == BinaryOperator.TIMES) {
+      if (factory.areSameByClass(lhs, Zero.class) || factory.areSameByClass(rhs, Zero.class)) {
+        return reflect(Zero.class);
+      }
+      if (factory.areSameByClass(lhs, NonZero.class) || factory.areSameByClass(rhs, NonZero.class)) {
+        return reflect(NonZero.class);
+      }
+    }
+    if (operator == BinaryOperator.DIVIDE) {
+      if (factory.areSameByClass(rhs, Zero.class)) {
+        return bottom();
+      }
+      if (factory.areSameByClass(lhs, NonZero.class)) {
+        return reflect(NonZero.class);
+      }
+      if (factory.areSameByClass(lhs, Zero.class)) {
+        return reflect(Zero.class);
+      }
+    }
     return top();
   }
 

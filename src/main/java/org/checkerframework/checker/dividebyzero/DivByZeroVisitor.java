@@ -4,10 +4,12 @@ import com.sun.source.tree.*;
 import java.lang.annotation.Annotation;
 import java.util.EnumSet;
 import java.util.Set;
+import javax.lang.model.element.AnnotationMirror;
 import javax.lang.model.type.TypeKind;
 import org.checkerframework.checker.dividebyzero.qual.*;
 import org.checkerframework.common.basetype.BaseTypeChecker;
 import org.checkerframework.common.basetype.BaseTypeVisitor;
+import org.checkerframework.framework.type.AnnotatedTypeMirror;
 
 public class DivByZeroVisitor extends BaseTypeVisitor<DivByZeroAnnotatedTypeFactory> {
 
@@ -29,6 +31,16 @@ public class DivByZeroVisitor extends BaseTypeVisitor<DivByZeroAnnotatedTypeFact
   private boolean errorAt(BinaryTree node) {
     // A BinaryTree can represent any binary operator, including + or -.
     // TODO
+    if (DIVISION_OPERATORS.contains(node.getKind())) {
+
+
+      AnnotatedTypeMirror rightType = atypeFactory.getAnnotatedType(node.getRightOperand());
+      AnnotationMirror topAnnotation = rightType.getPrimaryAnnotation(Top.class);
+      AnnotationMirror zeroAnnotation = rightType.getPrimaryAnnotation(Zero.class);
+
+      return topAnnotation != null || zeroAnnotation != null;
+    }
+
     return false;
   }
 
@@ -43,6 +55,16 @@ public class DivByZeroVisitor extends BaseTypeVisitor<DivByZeroAnnotatedTypeFact
     // A CompoundAssignmentTree represents any binary operator combined with an assignment,
     // such as "x += 10".
     // TODO
+    if (DIVISION_OPERATORS.contains(node.getKind())) {
+
+
+      AnnotatedTypeMirror rightType = atypeFactory.getAnnotatedType(node.getExpression());
+      AnnotationMirror topAnnotation = rightType.getPrimaryAnnotation(Top.class);
+      AnnotationMirror zeroAnnotation = rightType.getPrimaryAnnotation(Zero.class);
+
+      return topAnnotation != null || zeroAnnotation != null;
+    }
+
     return false;
   }
 
